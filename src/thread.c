@@ -5,58 +5,85 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: fltorren <fltorren@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/01/11 13:50:00 by fltorren          #+#    #+#             */
-/*   Updated: 2024/01/11 15:10:35 by fltorren         ###   ########.fr       */
+/*   Created: 2024/01/22 15:29:50 by fltorren          #+#    #+#             */
+/*   Updated: 2024/02/04 16:01:57 by fltorren         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "pipex.h"
 
-char	**ft_parse_cmd_args(char *cmd)
+void	ft_thread(int fd_in, int fd_out, char **cmd, t_pipex p)
 {
-	char	**args;
-
-	args = ft_split(cmd, ' ');
-	if (!args)
-		return (NULL);
-	return (args);
-}
-
-void	ft_in_child(t_pipex *pipex, char *cmd)
-{
-	char	**args;
-
-	dup2(pipex->pipe_fd[1], STDOUT_FILENO);
-	dup2(pipex->fd_in, STDIN_FILENO);
-	close(pipex->pipe_fd[0]);
-	close(pipex->fd_in);
-	args = ft_parse_cmd_args(cmd);
-	if (!args)
+	if (fd_in == -1)
 	{
-		perror("ft_parse_cmd_args");
+		ft_open_error(p.argv[1]);
 		_exit(1);
 	}
-	execve(pipex->cmd1, args + 1, pipex->envp);
-	ft_free_arr(args);
-	perror("execve");
-	_exit(1);
-}
-
-void	ft_out_child(t_pipex *pipex, char *cmd)
-{
-	char	**args;
-
-	dup2(pipex->pipe_fd[0], STDIN_FILENO);
-	dup2(pipex->fd_out, STDOUT_FILENO);
-	close(pipex->pipe_fd[1]);
-	close(pipex->fd_out);
-	args = ft_parse_cmd_args(cmd);
-	if (!args)
+	else if (fd_out == -1)
 	{
-		perror("ft_parse_cmd_args");
+		ft_open_error(p.argv[p.argc - 1]);
 		_exit(1);
 	}
-	execve(pipex->cmd2, args + 1, pipex->envp);
-	perror("execve");
-	_exit(1);
+	dup2(fd_in, STDIN_FILENO);
+	close(fd_in);
+	dup2(fd_out, STDOUT_FILENO);
+	close(fd_out);
+	execve(cmd[0], cmd, NULL);
+	perror("Error: execve failed\n");
+}
+
+static void	ft_thread_in(t_pipex p, int i)
+{
+	close(p.pipe_fd[0]);
+	ft_thread(p.fd_file_in, p.pipe_fd[1], p.cmds[i], p);
+}
+
+static void	ft_thread_out(t_pipex p, int i)
+{
+	close(p.pipe_fd[1]);
+	ft_thread(p.pipe_fd[0], p.fd_file_out, p.cmds[i], p);
+}
+
+static void	close_and_wait(t_pipex p, pid_t *pids)
+{
+	int	i;
+
+	close(p.pipe_fd[0]);
+	close(p.pipe_fd[1]);
+	close(p.fd_file_in);
+	i = 0;
+	while (i < p.cmds_len)
+	{
+		waitpid(pids[i], NULL, 0);
+		i++;
+	}
+	close(p.fd_file_out);
+	free(pids);
+}
+
+void	ft_manage_threads(t_pipex p)
+{
+	pid_t	*pids;
+	int		i;
+
+	pids = malloc(sizeof(pid_t) * p.cmds_len);
+	if (!pids)
+		return (ft_malloc_error());
+	i = -1;
+	while (++i < p.cmds_len)
+	{
+		pids[i] = fork();
+		if (pids[i] == -1)
+			return (ft_fork_error(pids));
+		if (pids[i] == 0)
+		{
+			if (i == 0)
+				ft_thread_in(p, i);
+			else if (i == p.cmds_len - 1)
+				ft_thread_out(p, i);
+			else
+				ft_thread(p.pipe_fd[0], p.pipe_fd[1], p.cmds[i], p);
+		}
+	}
+	close_and_wait(p, pids);
 }

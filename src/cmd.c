@@ -5,70 +5,106 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: fltorren <fltorren@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/01/10 22:35:51 by fltorren          #+#    #+#             */
-/*   Updated: 2024/01/10 23:41:05 by fltorren         ###   ########.fr       */
+/*   Created: 2024/01/22 14:51:56 by fltorren          #+#    #+#             */
+/*   Updated: 2024/01/25 15:27:52 by fltorren         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "pipex.h"
 
-static char	**ft_get_path_arr(char *envp[])
+static char	*ft_get_env(char *name, char **envp)
 {
-	int		i;
-	char	**path_arr;
+	size_t	i;
+	size_t	len;
 
+	len = ft_strlen(name);
 	i = 0;
 	while (envp[i])
 	{
-		if (ft_strncmp(envp[i], "PATH=", 5) == 0)
-		{
-			path_arr = ft_split(envp[i] + 5, ':');
-			return (path_arr);
-		}
+		if (ft_strncmp(envp[i], name, len) == 0)
+			return (envp[i] + len + 1);
 		i++;
 	}
 	return (NULL);
 }
 
-static char	*ft_parse_cmd_str(char *cmd_str)
+static char	*ft_join_cmd(char *cmd, char *path)
 {
-	char	**split;
-	char	*cmd;
 	char	*tmp;
+	char	*tmp2;
 
-	split = ft_split(cmd_str, ' ');
-	cmd = ft_strdup(split[0]);
-	ft_free_arr(split);
-	tmp = cmd;
-	cmd = ft_strjoin("/", cmd);
+	tmp = ft_strjoin(path, "/");
+	if (!tmp)
+		return (NULL);
+	tmp2 = ft_strjoin(tmp, cmd);
+	if (!tmp2)
+	{
+		free(tmp);
+		return (NULL);
+	}
 	free(tmp);
-	return (cmd);
+	return (tmp2);
 }
 
-void	ft_parse_cmd(char *cmd_str, char **out, char **envp)
+static char	*ft_get_cmd_path(char *cmd, char *path)
 {
-	char	**path_arr;
-	char	*cmd_path;
-	char	*cmd;
+	char	**split;
 	size_t	i;
+	char	*tmp;
 
-	cmd = ft_parse_cmd_str(cmd_str);
-	path_arr = ft_get_path_arr(envp);
-	if (!path_arr || !cmd)
-		return ;
+	split = ft_split(path, ':');
+	if (!split)
+		return (NULL);
 	i = 0;
-	while (path_arr[i])
+	while (split[i])
 	{
-		cmd_path = ft_strjoin(path_arr[i], cmd);
-		if (access(cmd_path, F_OK | X_OK) == 0)
+		tmp = ft_join_cmd(cmd, split[i]);
+		if (!tmp)
+			return (NULL);
+		if (access(tmp, F_OK) == 0)
 		{
-			*out = cmd_path;
-			break ;
+			ft_free_arr(split);
+			return (tmp);
 		}
-		else
-			free(cmd_path);
+		free(tmp);
 		i++;
 	}
-	free(cmd);
-	ft_free_arr(path_arr);
+	ft_free_arr(split);
+	return (NULL);
+}
+
+/*
+	Takes a string from the command input
+	Splits it into a command and all its arguments
+	Adds the PATH to the command
+	Returns the command with its arguments
+
+	Eg. "ls -l" -> ["/bin/ls', "-l", NULL];
+	Eg. "awk ''{count++} END {print count}''"
+			-> ["/usr/bin/awk", "''{count++} END {print count}''", NULL];
+*/
+char	**ft_parse_cmd(char *arg, char **envp)
+{
+	char	**split;
+	char	*path;
+	char	*cmd;
+
+	split = ft_custom_split(arg, ' ');
+	if (!split)
+		return (NULL);
+	path = ft_get_env("PATH", envp);
+	if (!path)
+	{
+		ft_free_arr(split);
+		return (NULL);
+	}
+	cmd = ft_get_cmd_path(split[0], path);
+	if (!cmd)
+	{
+		ft_free_arr(split);
+		return (NULL);
+	}
+	free(split[0]);
+	split[0] = cmd;
+	return (split);
 }

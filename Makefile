@@ -4,7 +4,7 @@ CFLAGS			=	-Wall -Wextra -Werror -g
 RM				=	rm -rf
 
 OUT_DIR			=	build
-SRCS			=	src/pipex.c src/cmd.c src/thread.c src/utils.c
+SRCS			=	src/pipex.c src/cmd.c src/thread.c src/utils.c src/error.c
 OBJS			=	$(SRCS:%.c=$(OUT_DIR)/%.o)
 
 LIBFT_PATH		=	./libft

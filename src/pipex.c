@@ -6,84 +6,50 @@
 /*   By: fltorren <fltorren@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/01/05 16:29:42 by fltorren          #+#    #+#             */
-/*   Updated: 2024/01/22 14:49:15 by fltorren         ###   ########.fr       */
+/*   Updated: 2024/02/04 15:57:52 by fltorren         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "pipex.h"
 
-static int	ft_init(int argc, char **argv, t_pipex *data)
+static void	ft_parse_cmds(char **argv, int argc, char *envp[], char ***cmds)
 {
-	if (argc != 5)
+	int	i;
+
+	i = 2;
+	while (i < argc - 1)
 	{
-		perror("Error: wrong number of arguments\n");
-		return (0);
+		cmds[i - 2] = ft_parse_cmd(argv[i], envp);
+		if (!cmds[i - 2])
+			ft_cmd_error(argv[i]);
+		i++;
 	}
-	if (pipe(data->pipe_fd) == -1)
-	{
-		perror("Error: pipe failed\n");
-		return (0);
-	}
-	data->fd_in = open(argv[1], O_RDONLY);
-	if (data->fd_in == -1)
-	{
-		perror("Error: open failed\n");
-		return (0);
-	}
-	data->fd_out = open(argv[4], O_WRONLY | O_CREAT | O_TRUNC);
-	if (data->fd_out == -1)
-	{
-		perror("Error: open failed\n");
-		return (0);
-	}
-	ft_parse_cmd(argv[2], &data->cmd1, data->envp);
-	ft_parse_cmd(argv[3], &data->cmd2, data->envp);
-	return (data->cmd1 && data->cmd2);
 }
 
-static void	ft_free_data(t_pipex *data)
+int	main(int argc, char **argv, char *envp[])
 {
-	if (data->pipe_fd[0] != -1)
-		close(data->pipe_fd[0]);
-	if (data->pipe_fd[1] != -1)
-		close(data->pipe_fd[1]);
-	if (data->fd_in != -1)
-		close(data->fd_in);
-	if (data->fd_out != -1)
-		close(data->fd_out);
-	if (data->cmd1)
-		free(data->cmd1);
-	if (data->cmd2)
-		free(data->cmd2);
-}
-
-int	main(int argc, char *argv[], char *envp[])
-{
+	char	***cmds;
 	t_pipex	data;
-	pid_t	pids[2];
 
-	data.envp = envp;
-	if (ft_init(argc, argv, &data))
+	if (argc < 5)
 	{
-		pids[0] = fork();
-		if (pids[0] < 0)
-		{
-			perror("Error: fork failed\n");
-			return (1);
-		}
-		if (pids[0] == 0)
-			ft_in_child(&data, argv[2]);
-		pids[1] = fork();
-		if (pids[1] < 0)
-		{
-			perror("Error: fork failed\n");
-			return (1);
-		}
-		if (pids[1] == 0)
-			ft_out_child(&data, argv[3]);
-		ft_free_data(&data);
-		waitpid(pids[0], NULL, 0);
-		waitpid(pids[1], NULL, 0);
+		write(2, "Error: wrong number of arguments\n", 33);
+		return (1);
 	}
+	cmds = malloc(sizeof(char **) * argc - 3);
+	if (!cmds)
+	{
+		write(2, "Error: malloc failed\n", 21);
+		return (1);
+	}
+	ft_parse_cmds(argv, argc, envp, cmds);
+	data.cmds = cmds;
+	data.cmds_len = argc - 3;
+	data.fd_file_in = open(argv[1], O_RDONLY);
+	data.fd_file_out = open(argv[argc - 1], O_WRONLY | O_CREAT | O_TRUNC, 0666);
+	data.argv = argv;
+	data.argc = argc;
+	pipe(data.pipe_fd);
+	ft_manage_threads(data);
 	return (0);
 }
