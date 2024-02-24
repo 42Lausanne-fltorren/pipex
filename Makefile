@@ -22,7 +22,8 @@ $(LIBFT):			$(OUT_DIR)
 $(OUT_DIR):
 					mkdir -p $(OUT_DIR)
 
-bonus:				all
+bonus:				$(LIBFT)
+					$(CC) $(CFLAGS) -Iincludes -Ilibft -Llibft -lft -DBONUS=1 ${MAIN} $(SRCS) build/libft.a -o $(NAME) 
 
 clean:
 					$(RM) $(OUT_DIR)

@@ -6,24 +6,16 @@
 /*   By: fltorren <fltorren@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/01/22 15:29:50 by fltorren          #+#    #+#             */
-/*   Updated: 2024/02/04 16:01:57 by fltorren         ###   ########.fr       */
+/*   Updated: 2024/02/24 11:08:13 by fltorren         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "pipex.h"
 
-void	ft_thread(int fd_in, int fd_out, char **cmd, t_pipex p)
+void	ft_thread(int fd_in, int fd_out, char **cmd)
 {
-	if (fd_in == -1)
-	{
-		ft_open_error(p.argv[1]);
+	if (fd_in == -1 || fd_out == -1)
 		_exit(1);
-	}
-	else if (fd_out == -1)
-	{
-		ft_open_error(p.argv[p.argc - 1]);
-		_exit(1);
-	}
 	dup2(fd_in, STDIN_FILENO);
 	close(fd_in);
 	dup2(fd_out, STDOUT_FILENO);
@@ -35,13 +27,13 @@ void	ft_thread(int fd_in, int fd_out, char **cmd, t_pipex p)
 static void	ft_thread_in(t_pipex p, int i)
 {
 	close(p.pipe_fd[0]);
-	ft_thread(p.fd_file_in, p.pipe_fd[1], p.cmds[i], p);
+	ft_thread(p.fd_file_in, p.pipe_fd[1], p.cmds[i]);
 }
 
 static void	ft_thread_out(t_pipex p, int i)
 {
 	close(p.pipe_fd[1]);
-	ft_thread(p.pipe_fd[0], p.fd_file_out, p.cmds[i], p);
+	ft_thread(p.pipe_fd[0], p.fd_file_out, p.cmds[i]);
 }
 
 static void	close_and_wait(t_pipex p, pid_t *pids)
@@ -82,7 +74,7 @@ void	ft_manage_threads(t_pipex p)
 			else if (i == p.cmds_len - 1)
 				ft_thread_out(p, i);
 			else
-				ft_thread(p.pipe_fd[0], p.pipe_fd[1], p.cmds[i], p);
+				ft_thread(p.pipe_fd[0], p.pipe_fd[1], p.cmds[i]);
 		}
 	}
 	close_and_wait(p, pids);

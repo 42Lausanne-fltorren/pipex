@@ -6,12 +6,15 @@
 /*   By: fltorren <fltorren@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/01/05 16:34:53 by fltorren          #+#    #+#             */
-/*   Updated: 2024/02/04 16:00:08 by fltorren         ###   ########.fr       */
+/*   Updated: 2024/02/24 10:27:47 by fltorren         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef PIPEX_H
 # define PIPEX_H
+# ifndef BONUS
+#  define BONUS 0
+# endif
 # include <unistd.h>
 # include <stdlib.h>
 # include <fcntl.h>

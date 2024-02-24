@@ -6,7 +6,7 @@
 /*   By: fltorren <fltorren@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/02/04 15:57:40 by fltorren          #+#    #+#             */
-/*   Updated: 2024/02/04 15:58:01 by fltorren         ###   ########.fr       */
+/*   Updated: 2024/02/24 10:46:16 by fltorren         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,5 +42,5 @@ void	ft_cmd_error(char *cmd)
 {
 	write(2, "pipex: ", 7);
 	write(2, cmd, ft_strlen(cmd));
-	write(2, ": command not found\n", 20);
+	write(2, ": Command not found\n", 20);
 }
